@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { PayPalButtons } from "@paypal/react-paypal-js";
+
 
 /* ── CSS ── */
 const injectCSS = () => {
@@ -652,7 +652,12 @@ const RingTherapy = ({ report }) => {
 
 /* ── MAIN APP ── */
 export default function App() {
-  useEffect(() => { injectCSS(); }, []);
+  useEffect(() => {
+    injectCSS();
+    if (window.IMP) {
+      window.IMP.init('imp00000000');
+    }
+  }, []);
 
   const [screen, setScreen] = useState("landing"); // landing | quiz | loading | results
   const [landingOut, setLandingOut] = useState(false);
@@ -661,8 +666,7 @@ export default function App() {
   const [fakeAns, setFakeAns] = useState([]);
   const [q10, setQ10] = useState(null);
   const [report, setReport] = useState(null);
-  const [unlockStatus, setUnlockStatus] = useState('locked'); // 'locked', 'step1_unlocked', 'all_unlocked'
-  const [paying, setPaying] = useState(null);
+  const [unlockStatus, setUnlockStatus] = useState('locked');
 
   const startQuiz = () => {
     setLandingOut(true);
@@ -679,12 +683,26 @@ export default function App() {
       setScreen("loading");
     }
   };
-  const handlePay = async (type) => {
-    setPaying(type);
-    await new Promise(r => setTimeout(r, 1500));
-    if (type === 'all' || type === 'step2') setUnlockStatus('all_unlocked');
-    else if (type === 'step1') setUnlockStatus('step1_unlocked');
-    setPaying(null);
+  
+  const handleKakaoPay = () => {
+    if (!window.IMP) return;
+    window.IMP.request_pay({
+      pg: 'kakaopay',
+      pay_method: 'card',
+      name: '오행 에너지 색채 요법 종합 분석',
+      amount: 990,
+      currency: 'KRW',
+      buyer_email: 'test@example.com',
+      buyer_name: userData.name || '고객',
+      buyer_tel: '010-1234-5678'
+    }, (rsp) => {
+      if (rsp.success) {
+        alert("결제가 완료되었습니다!");
+        setUnlockStatus('all_unlocked');
+      } else {
+        alert("결제에 실패했습니다.");
+      }
+    });
   };
 
   /* LANDING */
@@ -963,47 +981,31 @@ export default function App() {
             </div>
           </section>
 
-          {/* ── HIGHLIGHTED ALL-UNLOCK CTA ── */}
-          {unlockStatus === 'locked' && (
+          {/* ── KAKAOPAY CTA ── */}
+          {unlockStatus !== 'all_unlocked' && (
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               className="mt-8 mb-4 relative z-10"
             >
-              {/* Badge */}
-              <div className="absolute -top-3 right-4 bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg border border-red-400 rotate-3 z-20 pm" style={{ animationDuration: '3s' }}>
-                🔥 10% 할인
-              </div>
-
-              <div className="w-full relative group overflow-hidden bg-gradient-to-r from-rose-500 via-pink-600 to-amber-500 rounded-2xl p-4 shadow-xl transition-all duration-300">
-                {/* Pulse animation effect on background */}
-                <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="absolute inset-0 pm bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-                
-                <div className="relative z-10 flex flex-col items-center justify-center mb-3">
-                  <div className="text-white font-bold text-lg drop-shadow-md">
+              <div className="w-full relative group overflow-hidden bg-white rounded-2xl p-5 shadow-sm border border-[#FEE500] transition-all duration-300">
+                <div className="relative z-10 flex flex-col items-center justify-center mb-4">
+                  <div className="text-stone-800 font-bold text-lg">
                     <div className="flex items-center gap-2">
-                      <span className="text-xl">👑</span>
-                      <span><span className="text-white/70 line-through text-sm font-medium mr-1">$2.00</span> $1.80 결제하고 VVIP 프리미엄 전체 잠금해제</span>
+                      <span className="text-xl">🔐</span>
+                      <span>프리미엄 심층 분석 잠금 해제</span>
                     </div>
                   </div>
-                  <div className="text-pink-100 text-xs mt-1.5 font-medium tracking-wide">모든 진단과 시각화 테라피를 한 번에 오픈하세요!</div>
+                  <div className="text-stone-500 text-xs mt-1.5 font-medium tracking-wide">모든 진단과 시각화 테라피를 오픈하세요!</div>
                 </div>
 
-                <div className="relative z-20 px-4">
-                  <PayPalButtons 
-                    style={{ layout: "vertical", color: "gold", shape: "pill", label: "checkout", height: 45 }}
-                    createOrder={(data, actions) => {
-                      return actions.order.create({
-                        purchase_units: [{ amount: { value: "1.80" }, description: "VVIP Premium Unlock" }]
-                      });
-                    }}
-                    onApprove={(data, actions) => {
-                      return actions.order.capture().then(() => {
-                        setUnlockStatus('all_unlocked');
-                      });
-                    }}
-                  />
+                <div className="relative z-20 w-full px-2">
+                  <button onClick={handleKakaoPay} className="w-full bg-[#FEE500] hover:bg-[#FADA0A] text-[#000000] font-bold text-base py-4 rounded-xl shadow-sm transition-all duration-200 flex items-center justify-center gap-2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 3c-5.52 0-10 3.51-10 7.84 0 2.8 1.84 5.25 4.67 6.6l-1.2 4.39c-.11.41.36.72.69.49l5.05-3.37c.59.08 1.18.13 1.79.13 5.52 0 10-3.51 10-7.84S17.52 3 12 3z"/>
+                    </svg>
+                    오행 색채 요법 분석 보기 (990원)
+                  </button>
                 </div>
               </div>
             </motion.div>
@@ -1019,7 +1021,7 @@ export default function App() {
                 : <span className="ml-auto bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded-full font-medium">🔒 잠김</span>
               }
             </div>
-            <div className={`p-5 space-y-5 ${unlockStatus === 'locked' ? "blur-sm-custom pointer-events-none" : ""}`}>
+            <div className={`p-5 space-y-5 ${unlockStatus !== 'all_unlocked' ? "blur-sm-custom pointer-events-none" : ""}`}>
               {/* Symptoms */}
               <div>
                 <h3 className="text-sm font-bold text-stone-700 mb-3 flex items-center gap-1"><span>🔍</span> 체질적 약점 심층 진단</h3>
@@ -1061,29 +1063,7 @@ export default function App() {
                 <p className="text-sm text-blue-700 leading-relaxed">{r.exercise}</p>
               </div>
             </div>
-            {unlockStatus === 'locked' && (
-              <div className="px-5 pb-5">
-                <div className="w-full bg-stone-800 rounded-2xl p-4 shadow-md">
-                  <div className="text-center text-white font-bold text-sm mb-3">
-                    💳 $1 결제하고 미병 진단 보기
-                  </div>
-                  <PayPalButtons 
-                    style={{ layout: "vertical", color: "white", shape: "pill", label: "checkout", height: 40 }}
-                    createOrder={(data, actions) => {
-                      return actions.order.create({
-                        purchase_units: [{ amount: { value: "1.00" }, description: "Basic Mibyeong Diagnosis" }]
-                      });
-                    }}
-                    onApprove={(data, actions) => {
-                      return actions.order.capture().then(() => {
-                        setUnlockStatus('step1_unlocked');
-                      });
-                    }}
-                  />
-                </div>
-                <p className="text-center text-xs text-stone-400 mt-2">안전한 PayPal 결제</p>
-              </div>
-            )}
+
           </section>
 
           {/* ── $3 TIER ── */}
@@ -1153,29 +1133,7 @@ export default function App() {
                 </div>
               </div>
             </div>
-            {unlockStatus === 'step1_unlocked' && (
-              <div className="px-5 pb-5 mt-2 relative z-10">
-                <div className="w-full bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl p-4 shadow-md">
-                  <div className="text-center text-white font-bold text-sm mb-3">
-                    💎 $1 더 결제하고 VVIP 프리미엄 테라피 가이드 보기
-                  </div>
-                  <PayPalButtons 
-                    style={{ layout: "vertical", color: "white", shape: "pill", label: "checkout", height: 40 }}
-                    createOrder={(data, actions) => {
-                      return actions.order.create({
-                        purchase_units: [{ amount: { value: "1.00" }, description: "VVIP Premium Upgrade" }]
-                      });
-                    }}
-                    onApprove={(data, actions) => {
-                      return actions.order.capture().then(() => {
-                        setUnlockStatus('all_unlocked');
-                      });
-                    }}
-                  />
-                </div>
-                <p className="text-center text-xs text-stone-400 mt-2">안전한 PayPal 결제</p>
-              </div>
-            )}
+
           </section>
 
           {/* ── $3 VVIP TIER ── */}
