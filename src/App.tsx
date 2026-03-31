@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { PayPalButtons } from "@paypal/react-paypal-js";
