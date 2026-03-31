@@ -700,7 +700,7 @@ export default function App() {
         alert("결제가 완료되었습니다!");
         setUnlockStatus('all_unlocked');
       } else {
-        alert("결제에 실패했습니다.");
+        alert("결제에 실패했습니다. 사유: " + rsp.error_msg);
       }
     });
   };
@@ -1006,6 +1006,11 @@ export default function App() {
                     </svg>
                     오행 색채 요법 분석 보기 (990원)
                   </button>
+                  <div className="mt-3 text-center">
+                    <button onClick={() => { alert("테스트 잠금 해제!"); setUnlockStatus('all_unlocked'); }} className="text-[10px] text-stone-300 hover:text-stone-400 transition-colors">
+                      임시 잠금 해제 (디자인 확인용)
+                    </button>
+                  </div>
                 </div>
               </div>
             </motion.div>
